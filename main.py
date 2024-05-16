@@ -2,34 +2,53 @@ import argparse
 import os
 from dotenv import load_dotenv
 from minio import Minio
-from minio.error import S3Error
+from minio.error import S3Error, InvalidResponseError
 
-def upload_file_to_minio(server_url, access_key, secret_key, bucket_name, file_path, object_name):
-    
+
+def upload_file_to_minio(
+    server_url, access_key, secret_key, bucket_name, file_path, object_name
+):
+    # Remove schema (http:// or https://) from the server URL if present
+    if server_url.startswith("http://"):
+        server_url = server_url[len("http://") :]
+        secure = False
+    elif server_url.startswith("https://"):
+        server_url = server_url[len("https://") :]
+        secure = True
+    else:
+        secure = False
+
+    # Ensure there is no path in the server URL
+    if "/" in server_url:
+        raise ValueError("Path in endpoint is not allowed")
+
     # Initialize the Minio client
     client = Minio(
-        server_url,
-        access_key=access_key,
-        secret_key=secret_key,
-        secure=False  # Set to True if using HTTPS
+        server_url, access_key=access_key, secret_key=secret_key, secure=secure
     )
-    
+
     # Check if the bucket exists
-    found = client.bucket_exists(bucket_name)
-    if not found:
-        print(f"Bucket '{bucket_name}' does not exist.")
-        print("Listing existing buckets:")
-        buckets = client.list_buckets()
-        for bucket in buckets:
-            print(bucket.name)
-        return
-    
-    # Upload the file
     try:
+        buckets = client.list_buckets()
+        found = client.bucket_exists(bucket_name)
+        if not found:
+            print(f"Bucket '{bucket_name}' does not exist.")
+            print("Listing existing buckets:")
+            buckets = client.list_buckets()
+            for bucket in buckets:
+                print(bucket.name)
+            return
+
+        # Upload the file
         client.fput_object(bucket_name, object_name, file_path)
-        print(f"'{file_path}' is successfully uploaded as '{object_name}' to bucket '{bucket_name}'.")
+        print(
+            f"'{file_path}' is successfully uploaded as '{object_name}' to bucket '{bucket_name}'."
+        )
+    except InvalidResponseError as err:
+        print(f"Invalid response error: {err}")
     except S3Error as err:
         print(f"Failed to upload '{file_path}' to '{bucket_name}/{object_name}': {err}")
+
 
 if __name__ == "__main__":
     # Load environment variables from .env file
@@ -58,5 +77,5 @@ if __name__ == "__main__":
         secret_key=secret_key,
         bucket_name=args.bucket_name,
         file_path=args.file_path,
-        object_name=args.object_name
+        object_name=args.object_name,
     )

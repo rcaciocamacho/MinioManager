@@ -18,6 +18,9 @@ cp "$ENV_FILE" "$ENV_PATH"
 # Añadir el alias a .zshrc
 ZSHRC="$HOME/.zshrc"
 
+# Instalación de Dependencias con pip
+pip install -r requirements.txt --break-system-packages
+
 # Verificar si el alias ya existe y agregarlo si no está presente
 if ! grep -q "alias $ALIAS_NAME=" "$ZSHRC"; then
     echo "alias $ALIAS_NAME='python3 $SCRIPT_PATH'" >>"$ZSHRC"

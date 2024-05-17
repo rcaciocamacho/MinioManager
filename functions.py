@@ -1,4 +1,7 @@
-
+from minio import Minio
+import os
+import argparse
+from minio.error import S3Error, InvalidResponseError
 
 def help_parser(parser):
 
@@ -41,3 +44,45 @@ def config_client(server_url, access_key, secret_key):
         secret_key=secret_key,
         secure=secure
     )
+
+def upload_file_to_minio(client, bucket_name, file_path, object_name):
+    try:
+        client.fput_object(bucket_name, object_name, file_path)
+        print(f"'{file_path}' is successfully uploaded as '{object_name}' to bucket '{bucket_name}'.")
+    except InvalidResponseError as err:
+        print(f"Invalid response error: {err}")
+    except S3Error as err:
+        print(f"Failed to upload '{file_path}' to '{bucket_name}/{object_name}': {err}")
+
+
+def upload_directory_to_minio(client, bucket_name, directory_path, prefix=""):
+    base_directory = os.path.basename(directory_path.rstrip('/'))
+    for root, _, files in os.walk(directory_path):
+        for filename in files:
+            file_path = os.path.join(root, filename)
+            object_name = os.path.join(prefix, base_directory, os.path.relpath(file_path, directory_path)).replace("\\", "/")
+            upload_file_to_minio(client, bucket_name, file_path, object_name)
+
+
+def list_object_versions(client, bucket_name, object_name):
+    try:
+        versions = client.list_object_versions(bucket_name, prefix=object_name)
+        version_list = []
+        for version in versions:
+            version_id = version.version_id
+            last_modified = version.last_modified
+            date_str = last_modified.strftime("%d/%m/%Y")
+            version_list.append(version_id)
+            print(f"Version ID: {version_id}, Last Modified: {date_str}, Is Latest: {version.is_latest}")
+        return version_list
+    except S3Error as err:
+        print(f"Failed to list versions for '{object_name}' in bucket '{bucket_name}': {err}")
+        return []
+
+
+def download_object_version(client, bucket_name, object_name, version_id, download_path):
+    try:
+        client.fget_object(bucket_name, object_name, download_path, version_id=version_id)
+        print(f"Version '{version_id}' of object '{object_name}' is successfully downloaded to '{download_path}'.")
+    except S3Error as err:
+        print(f"Failed to download version '{version_id}' of object '{object_name}' from bucket '{bucket_name}': {err}")

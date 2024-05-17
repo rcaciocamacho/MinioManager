@@ -1,19 +1,19 @@
 #!/bin/bash
 
 # Directorio de instalación
-INSTALL_DIR="$HOME/.conf"
+INSTALL_DIR="$HOME/.config"
 SCRIPT_NAME="upload_to_minio.py"
+PYTHON_FILES="*.py"
 ENV_FILE=".env"
-SCRIPT_PATH="$INSTALL_DIR/$SCRIPT_NAME"
-ENV_PATH="$INSTALL_DIR/$ENV_FILE"
 ALIAS_NAME="upmin"
+SCRIPT_PATH="$INSTALL_DIR/$ALIAS_NAME/$SCRIPT_NAME"
 
 # Crear el directorio de instalación si no existe
-mkdir -p "$INSTALL_DIR"
+mkdir -p "$INSTALL_DIR/$ALIAS_NAME"
 
 # Copiar el script de Python y el archivo .env al directorio de instalación
-cp "$SCRIPT_NAME" "$SCRIPT_PATH"
-cp "$ENV_FILE" "$ENV_PATH"
+cp $PYTHON_FILES "$INSTALL_DIR/$ALIAS_NAME/"
+cp $ENV_FILE "$INSTALL_DIR/$ALIAS_NAME/$ENV_FILE"
 
 # Añadir el alias a .zshrc
 ZSHRC="$HOME/.zshrc"
